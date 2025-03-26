@@ -1,0 +1,32 @@
+{
+    "name": "parasail-node-bot",
+    "version": "1.0.0",
+    "description": "Automated bot for Parasail network node management",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+      "parasail",
+      "node",
+      "bot",
+      "blockchain",
+      "automation"
+    ],
+    "author": "Airdrop Insiders",
+    "license": "MIT",
+    "dependencies": {
+      "axios": "^1.6.0",
+      "blessed": "^0.1.81",
+      "blessed-contrib": "^4.11.0",
+      "ethers": "^5.7.2"
+    },
+    "engines": {
+      "node": ">=14.0.0"
+    },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/airdropinsiders/Parasail-Auto-Bot.git"
+    }
+  }
