@@ -6,29 +6,26 @@ const path = require('path');
 const ethers = require('ethers');
 
 class ParasailNodeBot {
-  constructor() {
-    this.config = this.loadConfig();
+  constructor(account, index, screen) {
+    this.account = account; // 账户信息（包括私钥）
+    this.index = index; // 账户索引，用于区分不同账户
+    this.screen = screen; // 共享的 blessed 屏幕
+    this.config = { privateKey: account.privateKey }; // 每个账户的配置
     this.baseUrl = 'https://www.parasail.network/api';
     this.initUI();
   }
 
   loadConfig() {
-    try {
-      const configPath = path.resolve('./config.json');
-      const rawConfig = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(rawConfig);
-    } catch (error) {
-      console.error('Error loading config:', error);
-      process.exit(1);
-    }
+    // 直接使用构造函数传入的账户信息，不从文件加载
+    return this.config;
   }
 
   saveConfig(config) {
     try {
-      const configPath = path.resolve('./config.json');
+      const configPath = path.resolve(`./config_account_${this.index}.json`);
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     } catch (error) {
-      this.log(`Error saving config: ${error.message}`);
+      this.log(`Error saving config for account ${this.index}: ${error.message}`);
     }
   }
 
@@ -88,17 +85,15 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
   }
 
   initUI() {
-    this.screen = blessed.screen({
-      smartCSR: true,
-      title: 'Auto Bot Parasail - Airdrop Insiders'
-    });
+    // 每个账户占用屏幕的一部分，垂直排列
+    const accountHeight = Math.floor(100 / this.screen.accountsCount); // 动态计算每个账户的高度
 
     this.layout = blessed.layout({
       parent: this.screen,
-      top: 0,
+      top: `${this.index * accountHeight}%`,
       left: 0,
       width: '100%',
-      height: '100%'
+      height: `${accountHeight}%`
     });
 
     this.banner = blessed.box({
@@ -107,7 +102,7 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
       left: 0,
       width: '100%',
       height: 3,
-      content: '{center}{bold}Auto Bot Parasail - Airdrop Insiders{/bold}{/center}',
+      content: `{center}{bold}Account ${this.index + 1} - Auto Bot Parasail{/bold}{/center}`,
       tags: true,
       border: 'line',
       style: {
@@ -121,7 +116,7 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
       top: 3,
       left: 0,
       width: '70%',
-      height: '90%',
+      height: '80%',
       border: 'line',
       style: {
         fg: 'white',
@@ -142,7 +137,7 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
       top: 3,
       right: 0,
       width: '30%',
-      height: '90%',
+      height: '80%',
       border: 'line',
       style: {
         fg: 'white',
@@ -179,28 +174,11 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
       }
     });
 
-    this.quitBox = blessed.box({
-      parent: this.layout,
-      bottom: 0,
-      left: 0,
-      width: '100%',
-      height: 1,
-      content: 'Press Q to Quit',
-      style: {
-        fg: 'white',
-        bg: 'gray'
-      }
-    });
-
-    this.screen.key(['q', 'C-c'], () => {
-      return process.exit(0);
-    });
-
     this.screen.render();
   }
 
   log(message) {
-    this.logBox.log(message);
+    this.logBox.log(`[Account ${this.index + 1}] ${message}`);
     this.screen.render();
   }
 
@@ -373,7 +351,7 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
   }
 
   async start() {
-    this.log(`Starting Parasail Node Bot`);
+    this.log(`Starting Parasail Node Bot for Account ${this.index + 1}`);
     
     try {
       if (!this.config.bearer_token) {
@@ -396,10 +374,58 @@ For full terms, refer to: https://parasail.network/Parasail_User_Terms.pdf`;
 }
 
 async function main() {
-  const nodeBot = new ParasailNodeBot();
-  await nodeBot.start();
+  // 加载多个账户的配置
+  let accounts;
+  try {
+    const configPath = path.resolve('./config.json');
+    const rawConfig = fs.readFileSync(configPath, 'utf8');
+    accounts = JSON.parse(rawConfig).accounts; // 假设 config.json 中有一个 accounts 数组
+  } catch (error) {
+    console.error('Error loading accounts config:', error);
+    process.exit(1);
+  }
+
+  if (!Array.isArray(accounts) || accounts.length === 0) {
+    console.error('No accounts found in config.json');
+    process.exit(1);
+  }
+
+  // 创建一个共享的 blessed 屏幕
+  const screen = blessed.screen({
+    smartCSR: true,
+    title: 'Multi-Account Parasail Bot'
+  });
+
+  // 记录账户数量，以便动态分配 UI 空间
+  screen.accountsCount = accounts.length;
+
+  // 为每个账户创建 ParasailNodeBot 实例
+  const bots = accounts.map((account, index) => new ParasailNodeBot(account, index, screen));
+
+  // 添加退出键
+  screen.key(['q', 'C-c'], () => {
+    return process.exit(0);
+  });
+
+  // 底部添加退出提示
+  const quitBox = blessed.box({
+    parent: screen,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: 1,
+    content: 'Press Q to Quit',
+    style: {
+      fg: 'white',
+      bg: 'gray'
+    }
+  });
+
+  // 并发启动所有账户
+  await Promise.all(bots.map(bot => bot.start()));
 }
 
 main().catch(error => {
   console.error('Main error:', error);
+  process.exit(1);
 });
