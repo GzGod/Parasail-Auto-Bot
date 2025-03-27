@@ -20,7 +20,7 @@ Parasail Node Bot is an automated tool for managing and interacting with Parasai
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/airdropinsiders/Parasail-Auto-Bot.git
+git clone https://github.com/Gzgod/Parasail-Auto-Bot.git
 cd Parasail-Auto-Bot
 ```
 
