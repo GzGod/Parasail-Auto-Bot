@@ -1,3 +1,7 @@
 {
-    "privateKey": "YOUR_ETHEREUM_PRIVATE_KEY"
-  }
+  "accounts": [
+    { "privateKey": "0xYourFirstPrivateKey" },
+    { "privateKey": "0xYourSecondPrivateKey" },
+    { "privateKey": "0xYourThirdPrivateKey" }
+  ]
+}
